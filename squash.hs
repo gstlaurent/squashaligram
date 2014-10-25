@@ -1,10 +1,10 @@
--- board_string is the current board as a string, history_strings is a list of
+-- string is the current board as a string, strings is a list of
 -- all the previous boards as strings
 crusher :: [String] -> Char -> Int -> Int -> [String]
-crusher (board_string:history_strings) player depth n =
-   unparse (best_next_move board player depth history):board_string:history_strings
-   where board = parse n board_string
-         history = map (parse n) history_strings
+crusher (string:strings) player depth n =
+   unparse (makeMove board player depth history):string:strings
+   where board = parse n string
+         history = map (parse n) strings
 
 -- converts input string to our board representation
 parse :: Int -> String -> Board
@@ -69,8 +69,8 @@ getBottomPositions' string row n
 unparse :: Board -> String
 unparse board = "" -- TODO
 
-best_next_move :: Board -> Char -> Int -> [Board] -> Board
-best_next_move board player depth history = board1 -- TODO
+makeMove :: Board -> Char -> Int -> [Board] -> Board
+makeMove board player depth history = board1 -- TODO
 
 
 
@@ -100,4 +100,4 @@ pos2_2 = Pos2 {row = 2, col = 2}
 
 
 board1 = Board {whites = [pos1,pos2], blacks = [], n = 3}
-board_string = "WWW-WW-------BB-BBB"
+bString = "WWW-WW-------BB-BBB"
