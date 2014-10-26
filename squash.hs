@@ -1,3 +1,5 @@
+import Data.List
+
 -- x is the current board as a string, xs is a list of
 -- all the previous boards as strings
 -- n is the board size (length of one side of the hexagonal board)
@@ -9,8 +11,8 @@ crusher (x:xs) player depth n =
 
 makeMove :: Board -> Char -> Int -> [Board] -> Board
 makeMove board player depth history = board1 -- TODO
-         
----------------- Parsing ---------------------------------------------------         
+
+---------------- Parsing ---------------------------------------------------
 -- converts input string to our board representation
 parse :: Int -> String -> Board
 parse n string = Board { whites = filterPlayer 'W' positions,
@@ -38,7 +40,7 @@ getTopPositions' :: String -> Int -> Int -> [(Pos, Char)]
 getTopPositions' string row n
    | row > n = []
    | otherwise = positions ++ (getTopPositions' rest_string (row+1) n)
-   where row_indices = cycle [row]
+   where row_indices = repeat row
          row_length = n + row - 1
          col_indices = take row_length [1..]
 
@@ -56,7 +58,7 @@ getBottomPositions' :: String -> Int -> Int -> [(Pos, Char)]
 getBottomPositions' string row n
    | row > 2*n-1 = []
    | otherwise = positions ++ (getBottomPositions' rest_string (row+1) n)
-   where row_indices = cycle [row]
+   where row_indices = repeat row
          row_length = n + (2*n-1) - row
          col_start = row-n+1
          col_indices = take row_length [col_start..]
@@ -74,26 +76,49 @@ unparse board = "" -- TODO
 
 ----------------- Generating New Boards ---------------------------------
 
-getNextBoards :: [Board] -> [Board] -> [Board]
-getNextBoards potentials history = filter notInHistory potentials
-   where notInHistory board = not (elem board history)
+-- getNextBoards :: [Board] -> [Board] -> [Board]
+-- getNextBoards potentials history = filter notInHistory potentials
+--    where notInHistory board = not (elem board history)
+
+
+-- For given history of boards, produce all legal boards 1 move away for given player
+getNextBoardsForPlayer :: [Board] -> Char -> [Board]
+getNextBoardsForPlayer (latest:history) player =
+   filter isNew $ getPotentialNextBoards latest player
+   where
+      isNew = flip notElem history
 
 getPotentialNextBoards :: Board -> Char-> [Board]
 getPotentialNextBoards board player =
-   map (makeMovedBoard board) (getPlayerMoves player board)
+   map (makeMovedBoard board) (getPlayerMoves board player)
 
 -- Gets all the moves the given player could make on the given board
-getPlayerMoves :: Char -> Board -> [Move]
-getPlayerMoves player board = map (getPieceMoves player) pieces
-   where pieces
-           | player == 'W' = whites board
-           | otherwise = blacks board
+getPlayerMoves :: Board -> Char -> [Move]
+getPlayerMoves board player = concatMap (getPieceMoves board player) pieces
+   where pieces = fst $ selectPieces board player
 
-getPieceMoves :: Char -> Pos -> [Move]
-getPieceMoves player pos = []
-           
+-- Produce (player's pieces, opponent's pieces)
+selectPieces :: Board -> Char -> ([Pos], [Pos])
+selectPieces board player
+   | player == 'W'   = (whites board, blacks board)
+   | otherwise       = (blacks board, whites board)
+
+getPieceMoves :: Board -> Char -> Pos -> [Move]
+-- TODO
+getPieceMoves board player pos = []
+
 makeMovedBoard :: Board -> Move -> Board
-makeMovedBoard board move = board
+makeMovedBoard board move
+   | player == 'W'   = Board {whites = newPlayerPieces, blacks = newOpponentPieces, n = (n board)}
+   | otherwise       = Board {whites = newOpponentPieces, blacks = newPlayerPieces, n = (n board)}
+   where
+      player = mover move
+      (playerPieces, opponentPieces) = selectPieces board player
+      newPlayerPieces = dest move:delete (source move) playerPieces
+      newOpponentPieces = delete (dest move) opponentPieces
+
+
+
 
 
 
@@ -111,8 +136,8 @@ getPotentialNextBoards board player = map (getMoves player board) pieces
    where pieces
             | player == 'W' = whites board
             | otherwise = blacks board
-          
-getMoves :: Char -> Board -> Pos -> [Board]            
+
+getMoves :: Char -> Board -> Pos -> [Board]
 getMoves player board piece
 -}
 
@@ -131,9 +156,9 @@ type Pos = (Int, Int)
 
 data Move = Move {source :: Pos,
                   dest :: Pos,
-                  player :: Char
+                  mover :: Char
                   }
-            deriving (Show,Eq)                  
+            deriving (Show,Eq)
 
 
 
@@ -165,4 +190,5 @@ pos2_2 = Pos2 {row = 2, col = 2}
 
 
 board1 = Board {whites = [pos1,pos2], blacks = [], n = 3}
-bString = "WWW-WW-------BB-BBB"
+bstring = "WWW-WW-------BB-BBB"
+board2 = parse 3 bstring
