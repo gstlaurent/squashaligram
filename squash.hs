@@ -1,17 +1,22 @@
--- string is the current board as a string, strings is a list of
+-- x is the current board as a string, xs is a list of
 -- all the previous boards as strings
+-- n is the board size (length of one side of the hexagonal board)
 crusher :: [String] -> Char -> Int -> Int -> [String]
-crusher (string:strings) player depth n =
-   unparse (makeMove board player depth history):string:strings
-   where board = parse n string
-         history = map (parse n) strings
+crusher (x:xs) player depth n =
+   unparse (makeMove board player depth history):x:xs
+   where board = parse n x
+         history = map (parse n) xs
 
+makeMove :: Board -> Char -> Int -> [Board] -> Board
+makeMove board player depth history = board1 -- TODO
+         
+---------------- Parsing ---------------------------------------------------         
 -- converts input string to our board representation
 parse :: Int -> String -> Board
 parse n string = Board { whites = filterPlayer 'W' positions,
-                            blacks = filterPlayer 'B' positions,
-                            n = n
-                            }
+                         blacks = filterPlayer 'B' positions,
+                         n = n
+                         }
    where positions = getAllPositions string n
 
 filterPlayer :: Char -> [(Pos, Char)] -> [Pos]
@@ -61,18 +66,55 @@ getBottomPositions' string row n
 
          rest_string = drop row_length string
 
-
-
-
-
 -- converts our representation to output string
 unparse :: Board -> String
 unparse board = "" -- TODO
 
-makeMove :: Board -> Char -> Int -> [Board] -> Board
-makeMove board player depth history = board1 -- TODO
 
 
+----------------- Generating New Boards ---------------------------------
+
+getNextBoards :: [Board] -> [Board] -> [Board]
+getNextBoards potentials history = filter notInHistory potentials
+   where notInHistory board = not (elem board history)
+
+getPotentialNextBoards :: Board -> Char-> [Board]
+getPotentialNextBoards board player =
+   map (makeMovedBoard board) (getPlayerMoves player board)
+
+-- Gets all the moves the given player could make on the given board
+getPlayerMoves :: Char -> Board -> [Move]
+getPlayerMoves player board = map (getPieceMoves player) pieces
+   where pieces
+           | player == 'W' = whites board
+           | otherwise = blacks board
+
+getPieceMoves :: Char -> Pos -> [Move]
+getPieceMoves player pos = []
+           
+makeMovedBoard :: Board -> Move -> Board
+makeMovedBoard board move = board
+
+
+
+
+
+
+
+
+
+
+
+{-
+getPotentialNextBoards :: Board -> [Boards]
+getPotentialNextBoards board player = map (getMoves player board) pieces
+   where pieces
+            | player == 'W' = whites board
+            | otherwise = blacks board
+          
+getMoves :: Char -> Board -> Pos -> [Board]            
+getMoves player board piece
+-}
 
 
 
@@ -86,6 +128,29 @@ data Board = Board {whites :: [Pos],
              deriving (Show,Eq)
 
 type Pos = (Int, Int)
+
+data Move = Move {source :: Pos,
+                  dest :: Pos,
+                  player :: Char
+                  }
+            deriving (Show,Eq)                  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+----------- examples -----------------------------
+
 
 data Pos2 = Pos2 {row :: Int,
                   col :: Int
