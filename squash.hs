@@ -23,6 +23,7 @@ parse n string = Board { whites = filterPlayer 'W' positions,
 
 filterPlayer :: Char -> [(Pos, Char)] -> [Pos]
 filterPlayer player positions = map fst $ filter is_player positions
+-- filterPlayer player positions = [fst p | p <- positions, is_player p]
    where is_player (pos,char) = char == player
 
 getAllPositions :: String -> Int -> [(Pos,Char)]
@@ -103,9 +104,24 @@ selectPieces board player
    | player == 'W'   = (whites board, blacks board)
    | otherwise       = (blacks board, whites board)
 
+-- Produce all moves the player can make with the piece at pos on the board
 getPieceMoves :: Board -> Char -> Pos -> [Move]
--- TODO
-getPieceMoves board player pos = []
+getPieceMoves board player pos = jumps ++ slides
+   where
+      jumps = []
+      slides = []
+
+
+
+isValidPosForSize :: Pos -> Int -> Bool
+isValidPosForSize pos n = isValidRow && isValidCol
+   where
+      row = fst pos; col = snd pos
+      isValidRow = 0 < row && row < 2*n
+      isValidCol
+         | row < n   = 0 < col && col < n+row
+         | otherwise = row-n < col && col < 2*n
+
 
 makeMovedBoard :: Board -> Move -> Board
 makeMovedBoard board move
@@ -152,6 +168,7 @@ data Board = Board {whites :: [Pos],
                     }
              deriving (Show,Eq)
 
+-- (Row, Column), 1-indexed, with 1 in top left
 type Pos = (Int, Int)
 
 data Move = Move {source :: Pos,
