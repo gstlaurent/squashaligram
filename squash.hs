@@ -100,17 +100,14 @@ getPlayerMoves board player = concatMap (getPieceMoves board player) pieces
 
 -- Produce (player's pieces, opponent's pieces)
 selectPieces :: Board -> Char -> ([Pos], [Pos])
-selectPieces board player
-   | player == 'W'   = (whites board, blacks board)
-   | otherwise       = (blacks board, whites board)
+selectPieces board 'W' = (whites board, blacks board)
+selectPieces board 'B' = (blacks board, whites board)
 
 -- Produce all moves the player can make with the piece at pos on the board
 getPieceMoves :: Board -> Char -> Pos -> [Move]
-getPieceMoves board player pos = jumps ++ slides
-   where
-      jumps = []
-      slides = []
-
+getPieceMoves board player pos = []
+   -- for each direction function, get legal jumps and slides. Perhaps use mapAcc?
+   -- yeah, let's make a list of direction functions...
 
 
 isValidPosForSize :: Pos -> Int -> Bool
@@ -133,10 +130,12 @@ makeMovedBoard board move
       newPlayerPieces = dest move:delete (source move) playerPieces
       newOpponentPieces = delete (dest move) opponentPieces
 
-
-
-
-
+-- Produce all valid Pos in a Board of size n
+getValidPosForSize :: Int -> [Pos]
+getValidPosForSize n =
+   [(r,c) | r <- indices, c <- indices, isValidPosForSize (r,c) n]
+   where
+      indices = [1..2*n-1]
 
 
 
