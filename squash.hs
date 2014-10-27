@@ -71,7 +71,23 @@ getBottomPositions' string row n
 
 -- converts our representation to output string
 unparse :: Board -> String
-unparse board = "" -- TODO
+unparse board = map (posToChar board) (getValidPosForSize $ n board)
+
+-- produce character representation of contents of pos on board
+posToChar :: Board -> Pos -> Char
+posToChar board pos
+  | elem pos (whites board)   = 'W'
+  | elem pos (blacks board)   = 'B'
+  | otherwise                 = '-'
+
+-- Produce all valid Pos in a Board of size n. They are in the same order that they appear
+-- in an input string.
+getValidPosForSize :: Int -> [Pos]
+getValidPosForSize n =
+   [(r,c) | r <- indices, c <- indices, isValidPosForSize (r,c) n]
+   where
+      indices = [1..2*n-1]
+
 
 
 
@@ -129,18 +145,6 @@ makeMovedBoard board move
       (playerPieces, opponentPieces) = selectPieces board player
       newPlayerPieces = dest move:delete (source move) playerPieces
       newOpponentPieces = delete (dest move) opponentPieces
-
--- Produce all valid Pos in a Board of size n
-getValidPosForSize :: Int -> [Pos]
-getValidPosForSize n =
-   [(r,c) | r <- indices, c <- indices, isValidPosForSize (r,c) n]
-   where
-      indices = [1..2*n-1]
-
-
-
-
-
 
 
 
