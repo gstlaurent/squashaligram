@@ -71,22 +71,33 @@ getBottomPositions' string row n
 
 -- converts our representation to output string
 unparse :: Board -> String
-unparse board = map (posToChar board) (getValidPosForSize $ n board)
+unparse board = map (charAtPosOn board) (getValidPos board)
 
 -- produce character representation of contents of pos on board
-posToChar :: Board -> Pos -> Char
-posToChar board pos
+charAtPosOn :: Board -> Pos -> Char
+charAtPosOn board pos
   | elem pos (whites board)   = 'W'
   | elem pos (blacks board)   = 'B'
   | otherwise                 = '-'
 
--- Produce all valid Pos in a Board of size n. They are in the same order that they appear
+-- Produce all valid Pos in given board. They are in the same order that they appear
 -- in an input string.
-getValidPosForSize :: Int -> [Pos]
-getValidPosForSize n =
-   [(r,c) | r <- indices, c <- indices, isValidPosForSize (r,c) n]
+getValidPos :: Board -> [Pos]
+getValidPos board =
+   [(r,c) | r <- indices, c <- indices, isValidPosForSize size (r,c)]
    where
-      indices = [1..2*n-1]
+      size = (n board)
+      indices = [1..2*size-1]
+
+-- the js version, for comparison/elucidation; here, the name charAtPosOn is stranger...
+-- function charAtPosOn(board) {
+--     return function(pos) {
+--         if (board.whites.contains(pos)) return 'W';
+--         if (board.blacks.contains(pos)) return 'B';
+--         return '-';
+--     };
+-- }
+
 
 
 
@@ -121,13 +132,38 @@ selectPieces board 'B' = (blacks board, whites board)
 
 -- Produce all moves the player can make with the piece at pos on the board
 getPieceMoves :: Board -> Char -> Pos -> [Move]
-getPieceMoves board player pos = []
-   -- for each direction function, get legal jumps and slides. Perhaps use mapAcc?
-   -- yeah, let's make a list of direction functions...
+getPieceMoves board player pos =
+  concatMap (getMovesInDir board player pos) dirs
+
+-- HACKED ON THE BUS: BEWARE:
 
 
-isValidPosForSize :: Pos -> Int -> Bool
-isValidPosForSize pos n = isValidRow && isValidCol
+-- Produce all legal moves in given direction for constraints
+getMovesInDir :: Board -> Char -> Pos -> Dir -> [Move]
+getMovesInDir board player pos dir
+  | isValid oneAway && isFree oneAway =               -- slide
+    [Move {source=pos, dest=oneAway, mover=player}]
+  | isValid twoAway && not (isPlayers twoAway) && isPlayers oneAway = -- jump
+    [Move {source=pos, dest=twoAway, mover=player}]
+  | otherwise = []
+  where
+    oneAway = getNeighbour pos dir
+    twoAway = getNeighbour oneAway dir
+    (players, opponents) = selectPieces board player
+
+    isValid = isValidPosForSize $ n board
+
+    isFree p = notElem p players && notElem p opponents
+    isPlayers p = elem p players
+
+-- Produce the pos of the closest neighbour in the given direciton.
+-- NOTE: this pos might NOT actually exist
+getNeighbour :: Pos -> Dir -> Pos
+getNeighbour (r,c) (dr, dc) = (r+dr, c+dc)
+
+
+isValidPosForSize :: Int -> Pos -> Bool
+isValidPosForSize n pos = isValidRow && isValidCol
    where
       row = fst pos; col = snd pos
       isValidRow = 0 < row && row < 2*n
@@ -171,7 +207,7 @@ data Board = Board {whites :: [Pos],
                     }
              deriving (Show,Eq)
 
--- (Row, Column), 1-indexed, with 1 in top left
+-- (Row, Column), 1-indexed, with 1 in top left;
 type Pos = (Int, Int)
 
 data Move = Move {source :: Pos,
@@ -179,6 +215,14 @@ data Move = Move {source :: Pos,
                   mover :: Char
                   }
             deriving (Show,Eq)
+
+-- The closest neighbour in a given direction, with (drow, dcol)
+type Dir = (Int, Int)
+
+nw = (-1, -1); ne = (-1, 0)
+w =  ( 0, -1); e  = ( 0, 1)
+sw = ( 1,  0); se = ( 1, 1)
+dirs = [nw,ne,e,se,sw,w] -- the directions in clockwise order
 
 
 
@@ -211,4 +255,6 @@ pos2_2 = Pos2 {row = 2, col = 2}
 
 board1 = Board {whites = [pos1,pos2], blacks = [], n = 3}
 bstring = "WWW-WW-------BB-BBB"
-board2 = parse 3 bstring
+board3 = parse 3 bstring
+string4 = "WWWW-WWW---WW-----------BB---BBB-BBBB"  -- just guessing ...
+board4 = parse 4 string4
