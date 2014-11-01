@@ -45,7 +45,16 @@ other 'B' = 'W'
 
 ---------------- Static Evaluation ----------------------------------------
 evaluate :: Board -> Int
-evaluate board = 0 -- TODO
+evaluate board
+    | didWhiteWin      = size * 3
+    | didBlackWin      = size * -3
+    | otherwise = whiteCount - blackCount  -- +  (myMoves - oppMoves)
+    where
+      size = n board
+      didWhiteWin = blackCount < size
+      didBlackWin = whiteCount < size
+      whiteCount  = length $ whites board
+      blackCount  = length $ blacks board
 
 ---------------- Parsing ---------------------------------------------------
 -- converts input string to our board representation
