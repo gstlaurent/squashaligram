@@ -4,13 +4,33 @@ import Data.List
 -- all the previous boards as strings
 -- n is the board size (length of one side of the hexagonal board)
 crusher :: [String] -> Char -> Int -> Int -> [String]
-crusher (x:xs) player depth n =
-   unparse (makeMove board player depth history):x:xs
-   where board = parse n x
-         history = map (parse n) xs
+crusher boardStrings player depth n =
+   unparse (makeMove boards player depth):boardStrings
+   where boards = map (parse n) boardStrings
+         
+-----------------MiniMax--------------------------------------------------
+-- White is max player, black is min player
 
-makeMove :: Board -> Char -> Int -> [Board] -> Board
-makeMove board player depth history = board1 -- TODO
+-- TODO: remove - top level minimax function to get best next move
+makeMove :: [Board] -> Char -> Int -> Board
+makeMove boards player depth =
+   fst (minimax boards player depth)
+
+-- can we assume depth > 0?
+minimax :: [Board] -> Char -> Int -> (Board, Int)
+minimax (board:history) player depth
+   | depth == 0 = (board, evaluate board)
+--   | depth == 1 = maxOrMinScore player (getScores (generateAllMoves board player history))
+   | otherwise = minOrMax player boardsWithScores
+   where boardsWithScores =
+            (minimax (map (\ b -> b:board:history) (getNextBoardsForPlayer (board:history) player))
+         
+
+
+
+---------------- Static Evaluation ----------------------------------------
+evaluate :: Board -> Int
+evaluate board = 0 -- TODO
 
 ---------------- Parsing ---------------------------------------------------
 -- converts input string to our board representation
@@ -99,25 +119,7 @@ isValidPosForSize n pos = isValidRow && isValidCol
          | otherwise = row-n < col && col < 2*n
 
 
--- the js version, for comparison/elucidation; here, the name charAtPosOn is stranger...
--- function charAtPosOn(board) {
---     return function(pos) {
---         if (board.whites.contains(pos)) return 'W';
---         if (board.blacks.contains(pos)) return 'B';
---         return '-';
---     };
--- }
-
-
-
-
-
 ----------------- Generating New Boards ---------------------------------
-
--- getNextBoards :: [Board] -> [Board] -> [Board]
--- getNextBoards potentials history = filter notInHistory potentials
---    where notInHistory board = not (elem board history)
-
 
 -- For given history of boards, produce all legal boards 1 move away for given player
 getNextBoardsForPlayer :: [Board] -> Char -> [Board]
@@ -213,6 +215,7 @@ data Move = Move {source :: Pos,
                   }
             deriving (Show,Eq)
 
+-- TODO Alison check directions are correct            
 -- The closest neighbour in a given direction, with (drow, dcol)
 type Dir = (Int, Int)
 
