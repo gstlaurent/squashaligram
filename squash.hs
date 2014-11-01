@@ -1,4 +1,5 @@
 import Data.List
+import Data.Ord
 
 -- x is the current board as a string, xs is a list of
 -- all the previous boards as strings
@@ -7,25 +8,39 @@ crusher :: [String] -> Char -> Int -> Int -> [String]
 crusher boardStrings player depth n =
    unparse (makeMove boards player depth):boardStrings
    where boards = map (parse n) boardStrings
-         
+
 -----------------MiniMax--------------------------------------------------
 -- White is max player, black is min player
 
--- TODO: remove - top level minimax function to get best next move
+-- Produces the board that we determine to be the result of best move from minimax, man!
 makeMove :: [Board] -> Char -> Int -> Board
 makeMove boards player depth =
    fst (minimax boards player depth)
 
--- can we assume depth > 0?
+-- can we assume depth >= 0?
 minimax :: [Board] -> Char -> Int -> (Board, Int)
 minimax (board:history) player depth
-   | depth == 0 = (board, evaluate board)
---   | depth == 1 = maxOrMinScore player (getScores (generateAllMoves board player history))
-   | otherwise = minOrMax player boardsWithScores
-   where boardsWithScores =
-            (minimax (map (\ b -> b:board:history) (getNextBoardsForPlayer (board:history) player))
-         
+   | depth == 0   = (board, evaluate board)
+   | otherwise    = minOrMax player boardsWithScores
+   where
+      -- The scores of all the subboards from this board
+      boardsWithScores :: [(Board, Int)]
+      boardsWithScores  =
+         map getNextMinimax possibilites
+         where
+            getNextMinimax possibility = minimax possibility (other player) (depth-1)
+            possibilites =
+               map (\b -> b:board:history) (getNextBoardsForPlayer (board:history) player)
 
+-- produce the max if W, and the min if B
+minOrMax :: Char -> [(Board, Int)] -> (Board, Int)
+minOrMax 'W' = maximumBy (comparing snd)
+minOrMax 'B' = minimumBy (comparing snd)
+
+-- Switch player
+other :: Char -> Char
+other 'W' = 'B'
+other 'B' = 'W'
 
 
 ---------------- Static Evaluation ----------------------------------------
@@ -127,6 +142,7 @@ getNextBoardsForPlayer (latest:history) player =
    filter isNew $ getPotentialNextBoards latest player
    where
       isNew = flip notElem history
+
 
 getPotentialNextBoards :: Board -> Char-> [Board]
 getPotentialNextBoards board player =
