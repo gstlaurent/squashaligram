@@ -89,6 +89,16 @@ getValidPos board =
       size = (n board)
       indices = [1..2*size-1]
 
+isValidPosForSize :: Int -> Pos -> Bool
+isValidPosForSize n pos = isValidRow && isValidCol
+   where
+      row = fst pos; col = snd pos
+      isValidRow = 0 < row && row < 2*n
+      isValidCol
+         | row < n   = 0 < col && col < n+row
+         | otherwise = row-n < col && col < 2*n
+
+
 -- the js version, for comparison/elucidation; here, the name charAtPosOn is stranger...
 -- function charAtPosOn(board) {
 --     return function(pos) {
@@ -161,17 +171,6 @@ getMovesInDir board player pos dir
 getNeighbour :: Pos -> Dir -> Pos
 getNeighbour (r,c) (dr, dc) = (r+dr, c+dc)
 
-
-isValidPosForSize :: Int -> Pos -> Bool
-isValidPosForSize n pos = isValidRow && isValidCol
-   where
-      row = fst pos; col = snd pos
-      isValidRow = 0 < row && row < 2*n
-      isValidCol
-         | row < n   = 0 < col && col < n+row
-         | otherwise = row-n < col && col < 2*n
-
-
 makeMovedBoard :: Board -> Move -> Board
 makeMovedBoard board move
    | player == 'W'   = Board {whites = newPlayerPieces, blacks = newOpponentPieces, n = (n board)}
@@ -181,8 +180,6 @@ makeMovedBoard board move
       (playerPieces, opponentPieces) = selectPieces board player
       newPlayerPieces = dest move:delete (source move) playerPieces
       newOpponentPieces = delete (dest move) opponentPieces
-
-
 
 
 {-
