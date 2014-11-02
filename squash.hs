@@ -1,6 +1,12 @@
 import Data.List
 import Data.Ord
 
+-- TODO:-
+-- handle no valid moves
+-- evaluate: determine winner by num moves available?
+-- what happens if it's a winning move?
+-- clean up makeMove since so similar to minimax
+
 -- x is the current board as a string, xs is a list of
 -- all the previous boards as strings
 -- n is the board size (length of one side of the hexagonal board)
@@ -8,11 +14,11 @@ crusher :: [String] -> Char -> Int -> Int -> [String]
 crusher boardStrings player depth n =
    unparse (makeMove boards player depth):boardStrings
    where boards = map (parse n) boardStrings
-
 -----------------MiniMax--------------------------------------------------
 -- White is max player, black is min player
 
 -- Produces the board that we determine to be the result of best move from minimax, man!
+
 makeMove :: [Board] -> Char -> Int -> Board
 makeMove boards player depth =
    head (fst $ minOrMaxBy (comparing snd) scoredBoards)
