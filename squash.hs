@@ -15,17 +15,22 @@ crusher boardStrings player depth n =
 -- Produces the board that we determine to be the result of best move from minimax, man!
 makeMove :: [Board] -> Char -> Int -> Board
 makeMove boards player depth =
-   fst (minimax boards player depth)
+   head (fst $ minOrMaxBy (comparing snd) scoredBoards)
+   where
+      nexts = map (\b -> b:boards) $ getNextBoardsForPlayer boards player
+      scores = map (\b -> (minimax b player depth)) nexts
+      scoredBoards = zip nexts scores
+      minOrMaxBy = if player == 'W' then maximumBy else minimumBy
 
 -- can we assume depth >= 0?
-minimax :: [Board] -> Char -> Int -> (Board, Int)
+minimax :: [Board] -> Char -> Int -> Int
 minimax (board:history) player depth
-   | depth == 0   = (board, evaluate board)
-   | otherwise    = minOrMax player boardsWithScores
+   | depth == 0   = evaluate board
+   | otherwise    = minOrMax player scores
    where
       -- The scores of all the subboards from this board
-      boardsWithScores :: [(Board, Int)]
-      boardsWithScores  =
+      scores :: [Int]
+      scores  =
          map getNextMinimax possibilites
          where
             getNextMinimax possibility = minimax possibility (other player) (depth-1)
@@ -33,9 +38,9 @@ minimax (board:history) player depth
                map (\b -> b:board:history) (getNextBoardsForPlayer (board:history) player)
 
 -- produce the max if W, and the min if B
-minOrMax :: Char -> [(Board, Int)] -> (Board, Int)
-minOrMax 'W' = maximumBy (comparing snd)
-minOrMax 'B' = minimumBy (comparing snd)
+minOrMax :: Char -> [Int] -> Int
+minOrMax 'W' = maximum
+minOrMax 'B' = minimum
 
 -- Switch player
 other :: Char -> Char
