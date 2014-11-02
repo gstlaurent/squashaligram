@@ -214,16 +214,38 @@ makeMovedBoard board move
       newOpponentPieces = delete (dest move) opponentPieces
 
 
-{-
-getPotentialNextBoards :: Board -> [Boards]
-getPotentialNextBoards board player = map (getMoves player board) pieces
-   where pieces
-            | player == 'W' = whites board
-            | otherwise = blacks board
+------------------GRAPHICAL-----------------------
 
-getMoves :: Char -> Board -> Pos -> [Board]
-getMoves player board piece
--}
+
+-- Prints all given boards with a blank line between the boards
+-- printBoards :: [Board] -> IO ()
+-- printBoards boards = mapM_ (\ b -> printBoard ("":b)) boards
+
+-- Shows the given board
+printRows :: [String] -> IO ()
+printRows rows = putStr (unlines rows)
+
+splitBoard bstring = ["  " ++ row1, " " ++ row2, row3, " " ++ row4, "  " ++ row5]
+   where
+    b = intersperse ' ' bstring
+    row1 = take 6 b
+    row2 = take 8 (drop 6 b)
+    row3 = take 10 (drop 14 b)
+    row4 = take 8 (drop 24 b)
+    row5 = take 6 (drop 32 b)
+
+printBoard b = printRows (splitBoard b)
+
+-- -- Prints all given boards with a blank line between the boards
+-- -- printBoards :: [B] -> IO ()
+-- printBoards boards = mapM_ (\ b -> printBoard ([]:b)) bs
+--    where bs = reverse (map splitBoard boards)
+
+-- play :: Int -> [String]
+play turns d p = play' turns [[string3]] p d
+play' 0 history _ _ = head history
+play' turns (x:xs) p d =
+   play' (turns-1) ((crusher x p d 3):x:xs) (other p) d
 
 
 
@@ -284,7 +306,7 @@ pos2_2 = Pos2 {row = 2, col = 2}
 
 
 board1 = Board {whites = [pos1,pos2], blacks = [], n = 3}
-bstring = "WWW-WW-------BB-BBB"
-board3 = parse 3 bstring
+string3 = "WWW-WW-------BB-BBB"
+board3 = parse 3 string3
 string4 = "WWWW-WWW---WW-----------BB---BBB-BBBB"  -- just guessing ...
 board4 = parse 4 string4
