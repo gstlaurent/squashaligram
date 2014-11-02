@@ -310,3 +310,41 @@ string3 = "WWW-WW-------BB-BBB"
 board3 = parse 3 string3
 string4 = "WWWW-WWW---WW-----------BB---BBB-BBBB"  -- just guessing ...
 board4 = parse 4 string4
+
+split3 bstring = ["  " ++ row1, " " ++ row2, row3, " " ++ row4, "  " ++ row5]
+   where
+    b = intersperse ' ' bstring
+    row1 = take 6 b
+    row2 = take 8 (drop 6 b)
+    row3 = take 10 (drop 14 b)
+    row4 = take 8 (drop 24 b)
+    row5 = take 6 (drop 32 b)
+
+
+-- play :: Int -> [String]
+play turns d p = play' turns [[string3]] p d
+play' 0 history _ _ = head history
+play' turns (x:xs) p d =
+   play' (turns-1) ((crusher x p d 3):x:xs) (other p) d    
+
+playIt turns d p = reverse (map split3 (play turns d p))   
+
+-- Get a list of lists of strings and output them nicely.      
+printStrMatrix :: [[String]] -> IO ()        
+printStrMatrix [] = printStrList []
+printStrMatrix (x:xs) = do
+        printStrList x
+        printStrMatrix xs
+
+-- Print nicely a list of strings.
+-- Eg: printStrList ["aabb", "ccdd", "eeff"] prints in the console:
+-- aabb
+-- ccdd
+-- eeff
+printStrList :: [String] -> IO ()
+printStrList [] = putStrLn ""
+printStrList (x:xs) = do 
+        putStrLn x
+        printStrList xs            
+
+  
