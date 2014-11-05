@@ -1,39 +1,89 @@
 import Data.List
 import Data.Ord
 
+-------------- Data Types -----------------------------------------
+{-
+TODO describe board layout
+We've assigned each character in the string to a position on the board.
+
+For example, a board of size 3 has the following layout:
+
+      (1,1) (1,2) (1,3)
+   (2,1) (2,2) (2,3) (2,4)
+(3,1) (3,2) (3,3) (3,4) (3,5)
+   (4,2) (4,3) (4,4) (4,5)
+      (5,3) (5,4) (5,5)
+-}
+data Board = Board {whites :: [Pos],
+                    blacks :: [Pos],
+                    n :: Int
+                    }
+             deriving (Show,Eq)
+
+-- (Row, Column), 1-indexed, with 1 in top left;
+type Pos = (Int, Int)
+
+data Move = Move {source :: Pos,
+                  dest :: Pos,
+                  mover :: Char
+                  }
+            deriving (Show,Eq)
+
+--The closest neighbour in a given direction, with (drow, dcol)
+type Dir = (Int, Int)
+
+nw = (-1, -1); ne = (-1, 0)
+w =  ( 0, -1); e  = ( 0, 1)
+sw = ( 1,  0); se = ( 1, 1)
+dirs = [nw,ne,e,se,sw,w] -- the directions in clockwise order
+
+
+-------------- Crusher ------------------------------------------
+
 -- TODO:-
 -- handle no valid moves
 -- evaluate: determine winner by num moves available?
 -- what happens if it's a winning move?
 -- clean up makeMove since so similar to minimax
+-- prune wen someone has won?
 
 -- x is the current board as a string, xs is a list of
 -- all the previous boards as strings
 -- n is the board size (length of one side of the hexagonal board)
+-- depth is the number of moves to look ahead
+-- returns the best move for player
 crusher :: [String] -> Char -> Int -> Int -> [String]
 crusher boardStrings player depth n =
    unparse (makeMove boards player depth):boardStrings
    where boards = map (parse n) boardStrings
+
+
 -----------------MiniMax--------------------------------------------------
 -- White is max player, black is min player
 
 -- Produces the board that we determine to be the result of best move from minimax, man!
-
 makeMove :: [Board] -> Char -> Int -> Board
-makeMove boards player depth =
-   head (fst $ minOrMaxBy (comparing snd) scoredBoards)
+makeMove boards player depth
+   | gameOver  = head boards
+   | otherwise = head (fst $ minOrMaxBy (comparing snd) scoredBoards)
    where
+      gameOver = (null nexts) || (didBlackWin $ head boards) || (didWhiteWin $ head boards)
       nexts = map (\b -> b:boards) $ getNextBoardsForPlayer boards player
       scores = map (\b -> (minimax b player depth)) nexts
       scoredBoards = zip nexts scores
       minOrMaxBy = if player == 'W' then maximumBy else minimumBy
 
+-- TODO comment about returning the score of the board      
 -- can we assume depth >= 0?
 minimax :: [Board] -> Char -> Int -> Int
 minimax (board:history) player depth
-   | depth == 0   = evaluate board
-   | otherwise    = minOrMax player scores
+   | depth == 0 || whiteWon || blackWon  = evaluate board
+   | otherwise                           = minOrMax player scores
    where
+      nexts = getNextBoardsForPlayer (board:history) player        
+      blackWon = ((player == 'W') && (null nexts)) || didBlackWin board
+      whiteWon = ((player == 'B') && (null nexts)) || didWhiteWin board
+      
       -- The scores of all the subboards from this board
       scores :: [Int]
       scores  =
@@ -41,7 +91,7 @@ minimax (board:history) player depth
          where
             getNextMinimax possibility = minimax possibility (other player) (depth-1)
             possibilites =
-               map (\b -> b:board:history) (getNextBoardsForPlayer (board:history) player)
+               map (\b -> b:board:history) nexts
 
 -- produce the max if W, and the min if B
 minOrMax :: Char -> [Int] -> Int
@@ -54,19 +104,32 @@ other 'W' = 'B'
 other 'B' = 'W'
 
 
----------------- Static Evaluation ----------------------------------------
+---------------- Static Board Evaluation ----------------------------------------
+
 evaluate :: Board -> Int
 evaluate board
-    | didWhiteWin      =  3 * size
-    | didBlackWin      = -3 * size
-    | otherwise = whiteCount - blackCount  -- +  (myMoves - oppMoves)
+    | didWhiteWin board =  3 * size
+    | didBlackWin board = -3 * size
+    | otherwise = whiteCount - blackCount
     where
       size = n board
-      didWhiteWin = blackCount < size
-      didBlackWin = whiteCount < size
       whiteCount  = length $ whites board
       blackCount  = length $ blacks board
+      
+-- TODO rename this sensibly - has to do with piece counts only, not full winning
+didWhiteWin :: Board -> Bool
+didWhiteWin board = blackCount < size
+   where
+      size = n board
+      blackCount  = length $ blacks board
 
+didBlackWin :: Board -> Bool      
+didBlackWin board = whiteCount < size
+   where
+      size = n board
+      whiteCount  = length $ whites board
+
+      
 ---------------- Parsing ---------------------------------------------------
 -- converts input string to our board representation
 parse :: Int -> String -> Board
@@ -248,53 +311,11 @@ printBoard b = printRows (splitBoard b)
 --    where bs = reverse (map splitBoard boards)
 
 -- play :: Int -> [String]
-play turns d p = play' turns [[string3]] p d
+{-play turns d p = play' turns [[string3]] p d
 play' 0 history _ _ = head history
 play' turns (x:xs) p d =
    play' (turns-1) ((crusher x p d 3):x:xs) (other p) d
-
-
-
-
--------------- data types -----------------------------------------
-
-data Board = Board {whites :: [Pos],
-                    blacks :: [Pos],
-                    n :: Int
-                    }
-             deriving (Show,Eq)
-
--- (Row, Column), 1-indexed, with 1 in top left;
-type Pos = (Int, Int)
-
-data Move = Move {source :: Pos,
-                  dest :: Pos,
-                  mover :: Char
-                  }
-            deriving (Show,Eq)
-
--- TODO Alison check directions are correct            
--- The closest neighbour in a given direction, with (drow, dcol)
-type Dir = (Int, Int)
-
-nw = (-1, -1); ne = (-1, 0)
-w =  ( 0, -1); e  = ( 0, 1)
-sw = ( 1,  0); se = ( 1, 1)
-dirs = [nw,ne,e,se,sw,w] -- the directions in clockwise order
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+-}
 
 ----------- examples -----------------------------
 
