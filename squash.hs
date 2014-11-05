@@ -14,6 +14,7 @@ For example, a board of size 3 has the following layout:
    (4,2) (4,3) (4,4) (4,5)
       (5,3) (5,4) (5,5)
 -}
+
 data Board = Board {whites :: [Pos],
                     blacks :: [Pos],
                     n :: Int
@@ -38,6 +39,10 @@ sw = ( 1,  0); se = ( 1, 1)
 dirs = [nw,ne,e,se,sw,w] -- the directions in clockwise order
 
 
+wsboard = "WWB----WW--B------B"
+bsboard = "BBW----BB--W------W"
+wboard = parse 3 wsboard
+bboard = parse 3 bsboard
 -------------- Crusher ------------------------------------------
 
 -- TODO:-
@@ -71,19 +76,19 @@ makeMove boards player depth
       nexts = map (\b -> b:boards) $ getNextBoardsForPlayer boards player
       scores = map (\b -> (minimax b player depth)) nexts
       scoredBoards = zip nexts scores
-      minOrMaxBy = if player == 'W' then maximumBy else minimumBy
+      minOrMaxBy = if player == 'B' then minimumBy else maximumBy
 
--- TODO comment about returning the score of the board      
+-- TODO comment about returning the score of the board
 -- can we assume depth >= 0?
 minimax :: [Board] -> Char -> Int -> Int
 minimax (board:history) player depth
    | depth == 0 || whiteWon || blackWon  = evaluate board
    | otherwise                           = minOrMax player scores
    where
-      nexts = getNextBoardsForPlayer (board:history) player        
+      nexts = getNextBoardsForPlayer (board:history) player
       blackWon = ((player == 'W') && (null nexts)) || didBlackWin board
       whiteWon = ((player == 'B') && (null nexts)) || didWhiteWin board
-      
+
       -- The scores of all the subboards from this board
       scores :: [Int]
       scores  =
@@ -115,7 +120,7 @@ evaluate board
       size = n board
       whiteCount  = length $ whites board
       blackCount  = length $ blacks board
-      
+
 -- TODO rename this sensibly - has to do with piece counts only, not full winning
 didWhiteWin :: Board -> Bool
 didWhiteWin board = blackCount < size
@@ -123,13 +128,13 @@ didWhiteWin board = blackCount < size
       size = n board
       blackCount  = length $ blacks board
 
-didBlackWin :: Board -> Bool      
+didBlackWin :: Board -> Bool
 didBlackWin board = whiteCount < size
    where
       size = n board
       whiteCount  = length $ whites board
 
-      
+
 ---------------- Parsing ---------------------------------------------------
 -- converts input string to our board representation
 parse :: Int -> String -> Board
@@ -352,12 +357,12 @@ split3 bstring = ["  " ++ row1, " " ++ row2, row3, " " ++ row4, "  " ++ row5]
 play turns d p = play' turns [[string3]] p d
 play' 0 history _ _ = head history
 play' turns (x:xs) p d =
-   play' (turns-1) ((crusher x p d 3):x:xs) (other p) d    
+   play' (turns-1) ((crusher x p d 3):x:xs) (other p) d
 
-playIt turns d p = reverse (map split3 (play turns d p))   
+playIt turns d p = reverse (map split3 (play turns d p))
 
--- Get a list of lists of strings and output them nicely.      
-printStrMatrix :: [[String]] -> IO ()        
+-- Get a list of lists of strings and output them nicely.
+printStrMatrix :: [[String]] -> IO ()
 printStrMatrix [] = printStrList []
 printStrMatrix (x:xs) = do
         printStrList x
@@ -370,8 +375,8 @@ printStrMatrix (x:xs) = do
 -- eeff
 printStrList :: [String] -> IO ()
 printStrList [] = putStrLn ""
-printStrList (x:xs) = do 
+printStrList (x:xs) = do
         putStrLn x
-        printStrList xs            
+        printStrList xs
 
-  
+
