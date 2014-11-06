@@ -74,7 +74,7 @@ makeMove boards player depth
       -- pieces, where n is the size of the board
       gameOver = (null nexts) || (didBlackWin $ head boards) || (didWhiteWin $ head boards)
       nexts = map (\b -> b:boards) $ getNextBoardsForPlayer boards player
-      scores = map (\b -> (minimax b (other player) (depth-1)) nexts
+      scores = map (\b -> (minimax b (other player) (depth-1))) nexts
       scoredBoards = zip nexts scores
       minOrMaxBy = if player == 'W' then maximumBy else minimumBy
 
@@ -93,9 +93,9 @@ minimax (board:history) player depth
       -- The scores of all the subboards from this board
       scores :: [Int]
       scores = map getNextMinimax possibilites
-      where
-         getNextMinimax possibility = minimax possibility (other player) (depth-1)
-         possibilites = map (\b -> b:board:history) nexts
+         where
+            getNextMinimax possibility = minimax possibility (other player) (depth-1)
+            possibilites = map (\b -> b:board:history) nexts
 
 -- produce the max if W, and the min if B
 minOrMax :: Char -> [Int] -> Int
