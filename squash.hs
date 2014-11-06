@@ -13,6 +13,8 @@ For example, a board of size 3 has the following layout:
 (3,1) (3,2) (3,3) (3,4) (3,5)
    (4,2) (4,3) (4,4) (4,5)
       (5,3) (5,4) (5,5)
+
+The lists whites and blacks contain Pos's in sorted order.
 -}
 data Board = Board {whites :: [Pos],
                     blacks :: [Pos],
@@ -41,11 +43,9 @@ dirs = [nw,ne,e,se,sw,w] -- the directions in clockwise order
 -------------- Crusher ------------------------------------------
 
 -- TODO:-
--- handle no valid moves
 -- evaluate: determine winner by num moves available?
 -- what happens if it's a winning move?
 -- clean up makeMove since so similar to minimax
--- prune wen someone has won?
 
 
 -- boardStrings is a list of all the previous boards as strings, with the
@@ -54,11 +54,12 @@ dirs = [nw,ne,e,se,sw,w] -- the directions in clockwise order
 -- depth is the number of moves to look ahead (must be >= 1)
 -- returns boardStrings with the best move for player added to the head of the list
 crusher :: [String] -> Char -> Int -> Int -> [String]
-crusher boardStrings player depth n =
-   unparse (makeMove boards player depth):boardStrings
-   where boards = map (parse n) boardStrings
+crusher boardStrings player depth n = unparse move:boardStrings
+   where
+      move = makeMove boards player depth
+      boards = map (parse n) boardStrings
 
-
+      
 -----------------MiniMax--------------------------------------------------
 -- White is max player, black is min player
 
@@ -72,7 +73,7 @@ makeMove boards player depth
    where
       -- the game is over if the player has no valid moves, or if either player has < n
       -- pieces, where n is the size of the board
-      gameOver = (null nexts) || (didBlackWin $ head boards) || (didWhiteWin $ head boards)
+      gameOver = (null nexts) || (tooFewWhites $ head boards) || (tooFewBlacks $ head boards)
       nexts = map (\b -> b:boards) $ getNextBoardsForPlayer boards player
       scores = map (\b -> (minimax b (other player) (depth-1))) nexts
       scoredBoards = zip nexts scores
@@ -87,8 +88,8 @@ minimax (board:history) player depth
    | otherwise  = minOrMax player scores
    where
       nexts = getNextBoardsForPlayer (board:history) player
-      whiteWon = ((player == 'B') && (null nexts)) || didWhiteWin board
-      blackWon = ((player == 'W') && (null nexts)) || didBlackWin board
+      whiteWon = ((player == 'B') && (null nexts)) || tooFewBlacks board
+      blackWon = ((player == 'W') && (null nexts)) || tooFewWhites board
       
       -- The scores of all the subboards from this board
       scores :: [Int]
@@ -112,23 +113,22 @@ other 'B' = 'W'
 
 evaluate :: Board -> Int
 evaluate board
-    | didWhiteWin board =  3 * size
-    | didBlackWin board = -3 * size
+    | tooFewBlacks board =  3 * size -- white has won
+    | tooFewWhites board = -3 * size -- black has won
     | otherwise = whiteCount - blackCount
     where
       size = n board
       whiteCount  = length $ whites board
       blackCount  = length $ blacks board
       
--- TODO rename this sensibly - has to do with piece counts only, not full winning
-didWhiteWin :: Board -> Bool
-didWhiteWin board = blackCount < size
+tooFewBlacks :: Board -> Bool
+tooFewBlacks board = blackCount < size
    where
       size = n board
       blackCount  = length $ blacks board
 
-didBlackWin :: Board -> Bool      
-didBlackWin board = whiteCount < size
+tooFewWhites :: Board -> Bool      
+tooFewWhites board = whiteCount < size
    where
       size = n board
       whiteCount  = length $ whites board
@@ -192,7 +192,7 @@ makeMovedBoard board move
    where
       player = mover move
       (playerPieces, opponentPieces) = selectPieces board player
-      newPlayerPieces = dest move:delete (source move) playerPieces
+      newPlayerPieces = sort (dest move:delete (source move) playerPieces)
       newOpponentPieces = delete (dest move) opponentPieces
 
 
@@ -226,6 +226,7 @@ getBottomPositions string n =
    where
       top_length = sum [n..(2*n-1)]
 
+-- returns positions in sorted order (sorted by Pos)      
 getTopPositions' :: String -> Int -> Int -> [(Pos, Char)]
 getTopPositions' string row n
    | row > n = []
@@ -243,6 +244,7 @@ getTopPositions' string row n
 -- string is the original board string with characters belonging to the first n
 -- rows removed. This is the original string minus the first sum [n..(2*n-1)]
 -- characters.
+-- returns positions in sorted order (sorted by Pos)      
 getBottomPositions' :: String -> Int -> Int -> [(Pos, Char)]
 getBottomPositions' string row n
    | row > 2*n-1 = []
@@ -316,20 +318,21 @@ printBoard b = printRows (splitBoard b)
 -- printBoards boards = mapM_ (\ b -> printBoard ([]:b)) bs
 --    where bs = reverse (map splitBoard boards)
 
--- play :: Int -> [String]
-{-play turns d p = play' turns [[string3]] p d
-play' 0 history _ _ = head history
-play' turns (x:xs) p d =
-   play' (turns-1) ((crusher x p d 3):x:xs) (other p) d
--}
+play :: Int -> Int -> Char -> [String]
+play turns d p = play' turns [string3] p d
 
--- play :: Int -> [String]
-play turns d p = play' turns [[string3]] p d
-play' 0 history _ _ = head history
-play' turns (x:xs) p d =
-   play' (turns-1) ((crusher x p d 3):x:xs) (other p) d    
+play' :: Int -> [String] -> Char -> Int -> [String]
+play' 0 history _ _ = history
+play' turns history p d =
+   play' (turns-1) (crusher history p d 3) (other p) d    
 
-playIt turns d p = reverse (map splitBoard (play turns d p))   
+playIt turns d p = reverse (map splitBoard (play turns d p))
+
+hasDuplicates turns d p = length (nub result) /= length result
+   where
+      result = play turns d p
+
+showGame turns d p = printStrMatrix $ playIt turns d p
 
 -- Get a list of lists of strings and output them nicely.      
 printStrMatrix :: [[String]] -> IO ()        
@@ -365,6 +368,7 @@ pos2_2 = Pos2 {row = 2, col = 2}
 
 
 board1 = Board {whites = [pos1,pos2], blacks = [], n = 3}
+board2 = Board {whites = [pos1,pos2], blacks = [], n = 3}
 string3 = "WWW-WW-------BB-BBB"
 board3 = parse 3 string3
 string4 = "WWWW-WWW---WW-----------BB---BBB-BBBB"  -- just guessing ...
