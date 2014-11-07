@@ -192,7 +192,7 @@ makeMovedBoard board move
    where
       player = mover move
       (playerPieces, opponentPieces) = selectPieces board player
-      newPlayerPieces = sort (dest move:delete (source move) playerPieces)
+      newPlayerPieces = insert (dest move) $ delete (source move) playerPieces
       newOpponentPieces = delete (dest move) opponentPieces
 
 
