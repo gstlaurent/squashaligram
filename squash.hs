@@ -1,30 +1,36 @@
 import Data.List
 import Data.Ord
 
--------------- Data Types and Constants -----------------------------------
-{-
-We've assigned each character in the string to a position on the board.
+-------------- Data Types -----------------------------------------------------
 
-For example, a board of size 3 has the following layout:
+-- We've associated each character in the string with a position on the
+-- board. The positions are tuples of row and column numbers. Rows and Columns
+-- are 1-indexed. The first row has positions (1, 1) to (1, size), where size is
+-- the size of the board passed to the crusher function.
 
-      (1,1) (1,2) (1,3)
-   (2,1) (2,2) (2,3) (2,4)
-(3,1) (3,2) (3,3) (3,4) (3,5)
-   (4,2) (4,3) (4,4) (4,5)
-      (5,3) (5,4) (5,5)
+-- The rows are horizontal, but the columns are diagonal.
+-- For example, a board of size 3 has the following layout:
 
-The lists whites and blacks contain Pos's in sorted order.
--}
+--       (1,1) (1,2) (1,3)
+--    (2,1) (2,2) (2,3) (2,4)
+-- (3,1) (3,2) (3,3) (3,4) (3,5)
+--    (4,2) (4,3) (4,4) (4,5)
+--       (5,3) (5,4) (5,5)
 
+-- whites is a sorted list containing the Pos's corresponding to the white
+-- pieces. Similarly, blacks is a sorted list of the Pos's of the black
+-- pieces. n is the size of the board.
 data Board = Board {whites :: [Pos],
                     blacks :: [Pos],
                     n :: Int
                     }
              deriving (Show,Eq)
 
--- (Row, Column), 1-indexed, with 1 in top left;
+-- (Row, Column), 1-indexed, with 1 in top left.
 type Pos = (Int, Int)
 
+-- A move contains the original position of the piece being moved, the position
+-- it's being moved to, and the player who is moving the piece
 data Move = Move {source :: Pos,
                   dest :: Pos,
                   mover :: Char
@@ -35,25 +41,31 @@ data Move = Move {source :: Pos,
 type Dir = (Int, Int)
 
 -------------- Crusher ------------------------------------------
--- (note: in order to ensure that there are no namespace conflicts, we've intended all
+
+-- (note: in order to ensure that there are no namespace conflicts, we've indented all
 --  helper functions so that they are within the 'where' of crusher_i5l8)
 
 -- boardStrings is a list of all the previous boards as strings, with the
 -- current board at the head of the list.
--- n is the board size (length of one side of the hexagonal board) (must be >= 3)
+-- n is the board size (length of one side of the hexagonal board) (PRECONDITION: must
+-- be >= 3)
 -- depth is the number of moves to look ahead (PRECONDITION: must be >= 1)
--- returns boardStrings with the best move for player added to the head of the list
+-- Return boardStrings with the best move for player added to the head of the list
 crusher_i5l8 :: [String] -> Char -> Int -> Int -> [String]
 crusher_i5l8 boardStrings player depth size = unparse move:boardStrings
    where
       move = makeMove boards player depth
       boards = map (parse size) boardStrings
 
+      
       -----------------MiniMax--------------------------------------------------
-      -- White is max player, black is min player
 
-      -- Produces the board that we determine to be the best move from minimax
-      -- If the current board is already in a winning state or losing state, returns the
+      -- In our representation, white is the max player, black is the min player.
+      -- I.e. positive scores indicate the board is better for white, negative scores
+      -- indicate the board is better for black.
+
+      -- Produce the board that we determine to be the best move from minimax
+      -- If the current board is already in a winning or losing state, return the
       -- current board.
       makeMove :: [Board] -> Char -> Int -> Board
       makeMove boards player depth
@@ -68,7 +80,8 @@ crusher_i5l8 boardStrings player depth size = unparse move:boardStrings
             scoredBoards = zip nexts scores
             minOrMaxBy = if player == 'W' then maximumBy else minimumBy
 
-      -- returns the score of the best evaluation at depth
+      -- Return the score of the best evaluation at depth TODO make this comment clearer
+      -- depth is the number of moves to look ahead when calculating board's score.
       minimax :: [Board] -> Char -> Int -> Int
       minimax (board:history) player depth
          | depth == 0 = evaluate board
@@ -77,17 +90,19 @@ crusher_i5l8 boardStrings player depth size = unparse move:boardStrings
          | otherwise  = minOrMax player scores
          where
             nexts = getNextBoardsForPlayer (board:history) player
+            -- A player has won if the other player has no legal moves, or the other player
+            -- has < n pieces.
             whiteWon = ((player == 'B') && (null nexts)) || tooFewBlacks board
             blackWon = ((player == 'W') && (null nexts)) || tooFewWhites board
 
-            -- The scores of all the subboards from this board
+            -- The scores of all the boards reachable in one move from this board
             scores :: [Int]
             scores = map getNextMinimax possibilites
                where
                   getNextMinimax possibility = minimax possibility (other player) (depth-1)
                   possibilites = map (\b -> b:board:history) nexts
 
-      -- produce the max if W, and the min if B
+      -- Produce the max if W, and the min if B
       minOrMax :: Char -> [Int] -> Int
       minOrMax 'W' = maximum
       minOrMax 'B' = minimum
@@ -132,11 +147,14 @@ crusher_i5l8 boardStrings player depth size = unparse move:boardStrings
          where
             isNew = flip notElem history
 
+      -- Produce all possible boards 1 move away for the given player. Some may not be the
+      -- result of legal moves as the board may be in the list of previous boards
       getPotentialNextBoards :: Board -> Char-> [Board]
       getPotentialNextBoards board player =
          map (makeMovedBoard board) (getPlayerMoves board player)
 
-      -- Gets all the moves the given player could make on the given board
+      -- Gets all possible moves the given player could make on the given board without
+      -- considering previous boards
       getPlayerMoves :: Board -> Char -> [Move]
       getPlayerMoves board player = concatMap (getPieceMoves board player) pieces
          where pieces = fst $ selectPieces board player
@@ -147,10 +165,12 @@ crusher_i5l8 boardStrings player depth size = unparse move:boardStrings
       selectPieces board 'B' = (blacks board, whites board)
 
       -- Produce all moves the player can make with the piece at pos on the board
+      -- A piece can move to an adjacent location if that position is empty, or
+      -- a piece can leap over one adjacent piece of the same colour if the landing
+      -- position does not contain one of that player's pieces.
       getPieceMoves :: Board -> Char -> Pos -> [Move]
       getPieceMoves board player pos =
         concatMap (getMovesInDir board player pos) dirs
-
         where
           -- enumerating Dirs:
           nw = (-1, -1); ne = (-1, 0)
@@ -158,8 +178,7 @@ crusher_i5l8 boardStrings player depth size = unparse move:boardStrings
           sw = ( 1,  0); se = ( 1, 1)
           dirs = [nw,ne,e,se,sw,w] -- the directions in clockwise order
 
-
-      -- Produce all legal moves in given direction for constraints
+      -- Produce all moves of the piece at pos in given direction
       getMovesInDir :: Board -> Char -> Pos -> Dir -> [Move]
       getMovesInDir board player pos dir
         | isValid oneAway && isFree oneAway =               -- slide
@@ -182,6 +201,7 @@ crusher_i5l8 boardStrings player depth size = unparse move:boardStrings
       getNeighbour :: Pos -> Dir -> Pos
       getNeighbour (r,c) (dr, dc) = (r+dr, c+dc)
 
+      -- Return the board produced by making the given move on the given board
       makeMovedBoard :: Board -> Move -> Board
       makeMovedBoard board move
          | player == 'W' = Board {whites = newPlayerPieces, blacks = newOpponentPieces, n = (n board)}
@@ -194,7 +214,8 @@ crusher_i5l8 boardStrings player depth size = unparse move:boardStrings
 
 
       ---------------- Parsing ---------------------------------------------------
-      -- converts input string to our board representation
+
+      -- Convert the input string to our board representation
       parse :: Int -> String -> Board
       parse n string = Board { whites = filterPlayer 'W' positions,
                                blacks = filterPlayer 'B' positions,
@@ -202,20 +223,23 @@ crusher_i5l8 boardStrings player depth size = unparse move:boardStrings
                                }
          where positions = getAllPositions string n
 
+      -- Produce all the Pos's in positions that contain player's pieces
       filterPlayer :: Char -> [(Pos, Char)] -> [Pos]
       filterPlayer player positions = map fst $ filter is_player positions
          where is_player (pos,char) = char == player
 
+      -- Produce tuples containing the position on the board and the character at that
+      -- position for all characters string
       getAllPositions :: String -> Int -> [(Pos,Char)]
       getAllPositions string n =
          (getTopPositions string n) ++ (getBottomPositions string n)
 
-      -- Returns tuples containing the position on the board and the character at that
+      -- Return a list of tuples containing the position on the board and the character at that
       -- position for the first n rows of the board
       getTopPositions :: String -> Int -> [(Pos,Char)]
       getTopPositions string n = getTopPositions' string 1 n
 
-      -- Returns tuples containing the position on the board and the character at that
+      -- Return a list of tuple containing the position on the board and the character at that
       -- position for the last n-1 rows of the board
       getBottomPositions :: String -> Int -> [(Pos,Char)]
       getBottomPositions string n =
@@ -223,7 +247,7 @@ crusher_i5l8 boardStrings player depth size = unparse move:boardStrings
          where
             top_length = sum [n..(2*n-1)]
 
-      -- returns positions in sorted order (sorted by Pos)
+      -- Return positions in sorted order (sorted by Pos)
       getTopPositions' :: String -> Int -> Int -> [(Pos, Char)]
       getTopPositions' string row n
          | row > n = []
@@ -238,10 +262,9 @@ crusher_i5l8 boardStrings player depth size = unparse move:boardStrings
 
             rest_string = drop row_length string
 
-      -- string is the original board string with characters belonging to the first n
-      -- rows removed. This is the original string minus the first sum [n..(2*n-1)]
-      -- characters.
-      -- returns positions in sorted order (sorted by Pos)
+      -- string is the original board string minus the characters belonging to the first n
+      -- rows, i.e. the original string minus the first sum [n..(2*n-1)] characters.
+      -- Return positions in sorted order (sorted by Pos)
       getBottomPositions' :: String -> Int -> Int -> [(Pos, Char)]
       getBottomPositions' string row n
          | row > 2*n-1 = []
@@ -257,19 +280,19 @@ crusher_i5l8 boardStrings player depth size = unparse move:boardStrings
 
             rest_string = drop row_length string
 
-      -- converts our representation to output string
+      -- Convert our representation of a board to output string representation
       unparse :: Board -> String
       unparse board = map (charAtPosOn board) (getValidPos board)
 
-      -- produce character representation of contents of pos on board
+      -- Produce the character representation of the piece at location pos on board
       charAtPosOn :: Board -> Pos -> Char
       charAtPosOn board pos
          | elem pos (whites board)   = 'W'
          | elem pos (blacks board)   = 'B'
          | otherwise                 = '-'
 
-      -- Produce all valid Pos in given board. They are in the same order that they appear
-      -- in an input string.
+      -- Produce all valid Pos in given board in the same order that they appear
+      -- in an input string
       getValidPos :: Board -> [Pos]
       getValidPos board =
          [(r,c) | r <- indices, c <- indices, isValidPosForSize size (r,c)]
