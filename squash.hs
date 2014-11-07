@@ -60,7 +60,7 @@ bboard = parse 3 bsboard
 -- returns the best move for player
 crusher :: [String] -> Char -> Int -> Int -> [String]
 crusher boardStrings player depth n =
-   unparse (makeMove boards player depth):boardStrings
+  unparse (makeMove boards player depth):boardStrings
    where boards = map (parse n) boardStrings
 
 
@@ -73,20 +73,23 @@ makeMove boards player depth
    | gameOver  = head boards
    | otherwise = head (fst $ minOrMaxBy (comparing snd) scoredBoards)
    where
-      gameOver = (null nexts) || (didBlackWin $ head boards) || (didWhiteWin $ head boards)
-      nexts = map (\b -> b:boards) $ getNextBoardsForPlayer boards player
-      scores = map (\b -> (minimax b player (depth-1))) nexts
+      nextHeads = map (\b -> elem (head b) (tail nexts)) nexts
+      gameOver = trace (show nextHeads) $ (null nexts) || (didBlackWin $ head boards) || (didWhiteWin $ head boards)
+      nexts = map (\b -> b:boards) $ getNextBoardsForPlayer boards player -- -> [next:history]
+      scores = map (\b -> (minimax b (other player) (depth-1))) nexts
       scoredBoards = zip nexts scores
       minOrMaxBy = if player == 'W' then maximumBy else minimumBy
+
+-- take 5
 
 -- TODO comment about returning the score of the board
 -- can we assume depth >= 0?
 minimax :: [Board] -> Char -> Int -> Int
 minimax (board:history) player depth
    | depth == 0 = evaluate board
-   | whiteWon   = trace ("whitewon " ++ unparse board ++ " " ++ show scores) (3*size)
-   | blackWon   = trace "blackwon" (-3*size)
-   | otherwise  = trace ("else " ++ unparse board ++ " " ++ show scores) $ minOrMax player scores
+   | whiteWon   = 3*size
+   | blackWon   = -3*size
+   | otherwise  = minOrMax player scores
    where
       size = n board
       nexts = getNextBoardsForPlayer (board:history) player
