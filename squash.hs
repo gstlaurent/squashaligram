@@ -3,7 +3,6 @@ import Data.Ord
 
 -------------- Data Types and Constants -----------------------------------
 {-
-TODO describe board layout
 We've assigned each character in the string to a position on the board.
 
 For example, a board of size 3 has the following layout:
@@ -16,6 +15,7 @@ For example, a board of size 3 has the following layout:
 
 The lists whites and blacks contain Pos's in sorted order.
 -}
+
 data Board = Board {whites :: [Pos],
                     blacks :: [Pos],
                     n :: Int
@@ -34,40 +34,21 @@ data Move = Move {source :: Pos,
 --The closest neighbour in a given direction, with (drow, dcol)
 type Dir = (Int, Int)
 
--- nw = (-1, -1); ne = (-1, 0)
--- w =  ( 0, -1); e  = ( 0, 1)
--- sw = ( 1,  0); se = ( 1, 1)
--- dirs = [nw,ne,e,se,sw,w] -- the directions in clockwise order
-
-
 -------------- Crusher ------------------------------------------
-
--- TODO:-
--- evaluate: determine winner by num moves available?
--- what happens if it's a winning move?
--- clean up makeMove since so similar to minimax
-
+-- (note: in order to ensure that there are no namespace conflicts, we've intended all
+--  helper functions so that they are within the 'where' of crusher_i5l8)
 
 -- boardStrings is a list of all the previous boards as strings, with the
 -- current board at the head of the list.
 -- n is the board size (length of one side of the hexagonal board) (must be >= 3)
--- depth is the number of moves to look ahead (must be >= 1)
+-- depth is the number of moves to look ahead (PRECONDITION: must be >= 1)
 -- returns boardStrings with the best move for player added to the head of the list
-crusher :: [String] -> Char -> Int -> Int -> [String]
-crusher boardStrings player depth size = unparse move:boardStrings
+crusher_i5l8 :: [String] -> Char -> Int -> Int -> [String]
+crusher_i5l8 boardStrings player depth size = unparse move:boardStrings
    where
       move = makeMove boards player depth
       boards = map (parse size) boardStrings
 
-
-
-      nw = (-1, -1); ne = (-1, 0)
-      w =  ( 0, -1); e  = ( 0, 1)
-      sw = ( 1,  0); se = ( 1, 1)
-      dirs = [nw,ne,e,se,sw,w] -- the directions in clockwise order
-
-
-            
       -----------------MiniMax--------------------------------------------------
       -- White is max player, black is min player
 
@@ -87,7 +68,7 @@ crusher boardStrings player depth size = unparse move:boardStrings
             scoredBoards = zip nexts scores
             minOrMaxBy = if player == 'W' then maximumBy else minimumBy
 
-      -- TODO comment about returning the score of the board      
+      -- returns the score of the best evaluation at depth
       minimax :: [Board] -> Char -> Int -> Int
       minimax (board:history) player depth
          | depth == 0 = evaluate board
@@ -98,7 +79,7 @@ crusher boardStrings player depth size = unparse move:boardStrings
             nexts = getNextBoardsForPlayer (board:history) player
             whiteWon = ((player == 'B') && (null nexts)) || tooFewBlacks board
             blackWon = ((player == 'W') && (null nexts)) || tooFewWhites board
-            
+
             -- The scores of all the subboards from this board
             scores :: [Int]
             scores = map getNextMinimax possibilites
@@ -128,20 +109,20 @@ crusher boardStrings player depth size = unparse move:boardStrings
             size = n board
             whiteCount  = length $ whites board
             blackCount  = length $ blacks board
-            
+
       tooFewBlacks :: Board -> Bool
       tooFewBlacks board = blackCount < size
          where
             size = n board
             blackCount  = length $ blacks board
 
-      tooFewWhites :: Board -> Bool      
+      tooFewWhites :: Board -> Bool
       tooFewWhites board = whiteCount < size
          where
             size = n board
             whiteCount  = length $ whites board
 
-            
+
       ----------------- Generating New Boards ---------------------------------
 
       -- For given history of boards, produce all legal boards 1 move away for given player
@@ -169,6 +150,14 @@ crusher boardStrings player depth size = unparse move:boardStrings
       getPieceMoves :: Board -> Char -> Pos -> [Move]
       getPieceMoves board player pos =
         concatMap (getMovesInDir board player pos) dirs
+
+        where
+          -- enumerating Dirs:
+          nw = (-1, -1); ne = (-1, 0)
+          w =  ( 0, -1); e  = ( 0, 1)
+          sw = ( 1,  0); se = ( 1, 1)
+          dirs = [nw,ne,e,se,sw,w] -- the directions in clockwise order
+
 
       -- Produce all legal moves in given direction for constraints
       getMovesInDir :: Board -> Char -> Pos -> Dir -> [Move]
@@ -223,7 +212,7 @@ crusher boardStrings player depth size = unparse move:boardStrings
 
       -- Returns tuples containing the position on the board and the character at that
       -- position for the first n rows of the board
-      getTopPositions :: String -> Int -> [(Pos,Char)]   
+      getTopPositions :: String -> Int -> [(Pos,Char)]
       getTopPositions string n = getTopPositions' string 1 n
 
       -- Returns tuples containing the position on the board and the character at that
@@ -234,7 +223,7 @@ crusher boardStrings player depth size = unparse move:boardStrings
          where
             top_length = sum [n..(2*n-1)]
 
-      -- returns positions in sorted order (sorted by Pos)      
+      -- returns positions in sorted order (sorted by Pos)
       getTopPositions' :: String -> Int -> Int -> [(Pos, Char)]
       getTopPositions' string row n
          | row > n = []
@@ -252,7 +241,7 @@ crusher boardStrings player depth size = unparse move:boardStrings
       -- string is the original board string with characters belonging to the first n
       -- rows removed. This is the original string minus the first sum [n..(2*n-1)]
       -- characters.
-      -- returns positions in sorted order (sorted by Pos)      
+      -- returns positions in sorted order (sorted by Pos)
       getBottomPositions' :: String -> Int -> Int -> [(Pos, Char)]
       getBottomPositions' string row n
          | row > 2*n-1 = []
@@ -296,89 +285,3 @@ crusher boardStrings player depth size = unparse move:boardStrings
             isValidCol
                | row < n   = 0 < col && col < n+row
                | otherwise = row-n < col && col < 2*n
-
-
-      
--- ------------------GRAPHICAL-----------------------
-
-
--- -- Prints all given boards with a blank line between the boards
--- -- printBoards :: [Board] -> IO ()
--- -- printBoards boards = mapM_ (\ b -> printBoard ("":b)) boards
-
--- -- Shows the given board
--- printRows :: [String] -> IO ()
--- printRows rows = putStr (unlines rows)
-
--- splitBoard bstring = ["  " ++ row1, " " ++ row2, row3, " " ++ row4, "  " ++ row5]
---    where
---     b = intersperse ' ' bstring
---     row1 = take 6 b
---     row2 = take 8 (drop 6 b)
---     row3 = take 10 (drop 14 b)
---     row4 = take 8 (drop 24 b)
---     row5 = take 6 (drop 32 b)
-
--- printBoard b = printRows (splitBoard b)
-
--- -- -- Prints all given boards with a blank line between the boards
--- -- -- printBoards :: [B] -> IO ()
--- -- printBoards boards = mapM_ (\ b -> printBoard ([]:b)) bs
--- --    where bs = reverse (map splitBoard boards)
-
--- play :: Int -> Int -> Char -> [String]
--- play turns d p = play' turns [string3] p d
-
--- play' :: Int -> [String] -> Char -> Int -> [String]
--- play' 0 history _ _ = history
--- play' turns history p d =
---    play' (turns-1) (crusher history p d 3) (other p) d    
-
--- playIt turns d p = reverse (map splitBoard (play turns d p))
-
--- hasDuplicates turns d p = length (nub result) /= length result
---    where
---       result = play turns d p
-
--- showGame turns d p = printStrMatrix $ playIt turns d p
-
--- -- Get a list of lists of strings and output them nicely.      
--- printStrMatrix :: [[String]] -> IO ()        
--- printStrMatrix [] = printStrList []
--- printStrMatrix (x:xs) = do
---         printStrList x
---         printStrMatrix xs
-
--- -- Print nicely a list of strings.
--- -- Eg: printStrList ["aabb", "ccdd", "eeff"] prints in the console:
--- -- aabb
--- -- ccdd
--- -- eeff
--- printStrList :: [String] -> IO ()
--- printStrList [] = putStrLn ""
--- printStrList (x:xs) = do 
---         putStrLn x
---         printStrList xs            
-
------------ examples -----------------------------
-
-
--- data Pos2 = Pos2 {row :: Int,
---                   col :: Int
---                   }
---             deriving (Show,Eq)
-
--- pos1 = (1,1)
--- pos2 = (2,2)
--- pos2_1 = Pos2 {row = 1, col = 1}
--- pos2_2 = Pos2 {row = 2, col = 2}
-
-
-
--- board1 = Board {whites = [pos1,pos2], blacks = [], n = 3}
--- board2 = Board {whites = [pos1,pos2], blacks = [], n = 3}
--- string3 = "WWW-WW-------BB-BBB"
--- board3 = parse 3 string3
--- string4 = "WWWW-WWW---WW-----------BB---BBB-BBBB"  -- just guessing ...
--- board4 = parse 4 string4
-
